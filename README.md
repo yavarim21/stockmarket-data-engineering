@@ -176,14 +176,7 @@ CREATE TABLE financial_news_sentiment (
 
 ---
 
-## 💡 Enhancements  
-- **Real-time Alerts**: Trigger Lambda functions for extreme sentiment scores.  
-- **Trend Analysis**: Join with stock data to correlate sentiment vs. price movements.  
-- **Dashboard**: Visualize with Streamlit/Plotly.  
 
----
-
-**✅ Integration Note**: The sentiment table joins with stock data via `publishedAt` for time-based analysis.  
 
 **💡 Note**: Use `python-dotenv` to manage secrets. For production, deploy with **Docker** and **AWS RDS**.  
 
