@@ -95,6 +95,95 @@ gdp = fred.get_series('GDP')  # Pandas DataFrame
 
 
 ---
+Here’s the updated `README.md` section incorporating your **Sentiment Analysis** workflow with NewsAPI and PostgreSQL integration:
+
+---
+
+# 📰 Sentiment Analysis Pipeline  
+**Automated news sentiment scoring and storage in AWS RDS PostgreSQL**  
+
+## 🔍 Workflow Overview  
+1. **Extract**: Fetch financial news from [NewsAPI](https://newsapi.org/).  
+2. **Analyze**: Score sentiment using `NLTK`'s VADER.  
+3. **Store**: Save results to PostgreSQL with sentiment labels.  
+
+```python
+# Key Steps (src/sentiment_analysis.py)
+from nltk.sentiment import SentimentIntensityAnalyzer
+
+# 1. Fetch NewsAPI data
+articles = requests.get(f"https://newsapi.org/v2/everything?q=stock&apiKey={API_KEY}").json()
+
+# 2. Calculate Sentiment
+df_news["sentiment_score"] = df_news["title"].apply(
+    lambda x: sia.polarity_scores(x)["compound"] if isinstance(x, str) else 0
+)
+df_news["sentiment_label"] = df_news["sentiment_score"].apply(
+    lambda x: "positive" if x > 0 else ("negative" if x < 0 else "neutral")
+)
+
+# 3. Store in PostgreSQL
+engine = create_engine(f'postgresql://{rds_user}:{rds_password}@{rds_host}:{rds_port}/{rds_db}')
+df_news.to_sql('financial_news_sentiment', engine, if_exists='replace', index=False)
+```
+
+---
+
+## 🗃 Database Schema (PostgreSQL)  
+```sql
+CREATE TABLE financial_news_sentiment (
+    publishedAt TIMESTAMP,        -- Article timestamp
+    title TEXT,                  -- News headline
+    description TEXT,            -- Summary content
+    url TEXT PRIMARY KEY,         -- Unique article URL
+    sentiment_score REAL,         -- Compound score (-1 to 1)
+    sentiment_label TEXT          -- "positive"/"neutral"/"negative"
+);
+```
+
+---
+
+## 📊 Sentiment Classification Logic  
+| Score Range  | Label      | Interpretation              |  
+|--------------|------------|-----------------------------|  
+| `> 0.05`     | Positive   | Bullish market sentiment    |  
+| `-0.05 to 0.05` | Neutral  | No strong sentiment        |  
+| `< -0.05`    | Negative   | Bearish market sentiment    |  
+
+---
+
+## 🚀 How to Use  
+1. **Set Environment Variables** (`.env`):  
+   ```ini
+   NEWS_API_KEY=your_key
+   RDS_HOST=your-rds-endpoint.rds.amazonaws.com
+   RDS_DB=your_db_name
+   ```
+
+2. **Run the Script**:  
+   ```bash
+   python src/sentiment_analysis.py
+   ```
+
+3. **Query Results**:  
+   ```python
+   # Get most negative news
+   pd.read_sql(
+       "SELECT * FROM financial_news_sentiment WHERE sentiment_score < -0.3 ORDER BY publishedAt DESC LIMIT 5",
+       engine
+   )
+   ```
+
+---
+
+## 💡 Enhancements  
+- **Real-time Alerts**: Trigger Lambda functions for extreme sentiment scores.  
+- **Trend Analysis**: Join with stock data to correlate sentiment vs. price movements.  
+- **Dashboard**: Visualize with Streamlit/Plotly.  
+
+---
+
+**✅ Integration Note**: The sentiment table joins with stock data via `publishedAt` for time-based analysis.  
 
 **💡 Note**: Use `python-dotenv` to manage secrets. For production, deploy with **Docker** and **AWS RDS**.  
 
